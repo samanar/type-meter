@@ -1,0 +1,28 @@
+{
+  "name": "type-meter",
+  "version": "1.0.0",
+  "description": "A lightweight Electron app for tracking keyboard activity system-wide with beautiful statistics and analytics",
+  "author": "ahmadianrad.saman@gmail.com",
+  "license": "MIT",
+  "type": "module",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron ."
+  },
+  "keywords": [
+    "keyboard-tracker",
+    "typing-statistics",
+    "productivity",
+    "electron",
+    "tray-app",
+    "keystroke-counter"
+  ],
+  "devDependencies": {
+    "electron": "^38.3.0"
+  },
+  "dependencies": {
+    "electron-store": "^11.0.2",
+    "uiohook-napi": "^1.5.4"
+  }
+}

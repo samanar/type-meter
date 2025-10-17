@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>TypeMeter Popover</title>
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'unsafe-inline'"
+    />
+    <style>
+      :root {
+        --bg: rgba(12, 18, 32, 0.86);
+        --card: #0f1627;
+        --text: #e6eaf2;
+        --muted: #8ea2c6;
+        --accent: #38c8ff;
+      }
+      html,
+      body {
+        margin: 0;
+        background: transparent;
+      }
+      .panel {
+        width: 100%;
+        height: 100%;
+        background: var(--bg);
+        backdrop-filter: blur(12px) saturate(1.1);
+        -webkit-backdrop-filter: blur(12px) saturate(1.1);
+        color: var(--text);
+        font: 13px/1.4 ui-sans-serif, system-ui, Inter, Segoe UI, Roboto;
+        border-radius: 14px;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+        display: flex;
+        flex-direction: column;
+      }
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 12px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      }
+      .title {
+        font-weight: 600;
+        letter-spacing: 0.2px;
+      }
+      .btn {
+        appearance: none;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        color: var(--text);
+        background: transparent;
+        padding: 6px 10px;
+        border-radius: 8px;
+        cursor: pointer;
+      }
+      .btn.primary {
+        border-color: transparent;
+        background: linear-gradient(135deg, var(--accent), #7f9cff);
+        color: #05121c;
+        font-weight: 700;
+      }
+      main {
+        padding: 12px;
+        display: grid;
+        gap: 10px;
+        grid-template-columns: 1fr;
+      }
+      .card {
+        background: var(--card);
+        padding: 10px;
+        border-radius: 10px;
+      }
+      .big {
+        font-size: 28px;
+        font-weight: 800;
+        letter-spacing: 0.3px;
+      }
+      .row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        color: var(--muted);
+      }
+      footer {
+        margin-top: auto;
+        padding: 10px 12px;
+        display: flex;
+        gap: 8px;
+      }
+      .pill {
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.06);
+        color: var(--muted);
+      }
+    </style>
+  </head>
+  <script>
+    console.log("popover html loaded");
+  </script>
+  <body>
+    <div class="panel">
+      <header>
+        <div class="title">TypeMeter popover</div>
+        <button id="close" class="btn" title="Close (Esc)">✕</button>
+      </header>
+
+      <main>
+        <div class="card">
+          inside popover
+          <div class="row">
+            <div>Total Keystrokes (today)</div>
+            <div class="pill" id="state">Tracking</div>
+          </div>
+          <div class="big" id="total">0</div>
+          <div class="row">
+            <span>Backspace</span><strong id="backs">0</strong>
+          </div>
+          <div class="row"><span>Enter</span><strong id="ent">0</strong></div>
+        </div>
+
+        <div class="card">
+          <div class="row">
+            <div>Keys / minute</div>
+            <div>last 60s</div>
+          </div>
+          <div class="big" id="kpm">0</div>
+        </div>
+      </main>
+
+      <footer>
+        <button id="open-dashboard" class="btn primary">Open Dashboard</button>
+        <button id="pause" class="btn">Pause</button>
+      </footer>
+    </div>
+
+    <script>
+      console.log("popover script loaded");
+      let paused = false;
+      let isWayland = false;
+
+      // Request initial stats when popover opens
+      window.typemeter.getStats();
+
+      // Listen for stats updates from main process
+      window.typemeter.onStatsUpdate((data) => {
+        const { todayStats, kpm, paused: p, isWayland: wayland } = data;
+
+        // Check if running on Wayland
+        if (wayland !== undefined) {
+          isWayland = wayland;
+          if (isWayland) {
+            // Show Wayland notice
+            document.getElementById("state").title =
+              "Wayland: Only tracks keys when this window is focused";
+          }
+        }
+
+        // Update display
+        document.getElementById("total").textContent = String(
+          todayStats.total || 0
+        );
+        document.getElementById("backs").textContent = String(
+          todayStats.backspace || 0
+        );
+        document.getElementById("ent").textContent = String(
+          todayStats.enter || 0
+        );
+        document.getElementById("kpm").textContent = String(kpm || 0);
+
+        // Update pause state if provided
+        if (p !== undefined) {
+          paused = p;
+          updatePauseUI();
+        }
+      });
+
+      // Wayland fallback: Track keys when window is focused
+      window.addEventListener("keydown", (e) => {
+        // Always handle Escape for closing
+        if (e.key === "Escape") {
+          window.typemeter.closePopover();
+          return;
+        }
+
+        // Track keys if on Wayland and not paused
+        if (isWayland && !paused) {
+          let keyType = "normal";
+          if (e.key === "Backspace") keyType = "backspace";
+          else if (e.key === "Enter") keyType = "enter";
+          else if (e.key === "Delete") keyType = "delete";
+          else if (e.key === " ") keyType = "space";
+
+          window.typemeter.sendKeyPress(keyType);
+        }
+      });
+
+      // Pause/resume reflected from tray menu
+      window.typemeter.onTracking(({ paused: p }) => {
+        paused = p;
+        updatePauseUI();
+      });
+
+      function updatePauseUI() {
+        const stateEl = document.getElementById("state");
+        const pauseBtn = document.getElementById("pause");
+
+        if (paused) {
+          stateEl.textContent = "Paused";
+          pauseBtn.textContent = "Resume";
+          stateEl.style.background = "rgba(255, 100, 100, 0.2)";
+        } else {
+          stateEl.textContent = isWayland ? "Tracking (Focused)" : "Tracking";
+          pauseBtn.textContent = "Pause";
+          stateEl.style.background = "rgba(56, 200, 255, 0.2)";
+        }
+      }
+
+      // Buttons
+      document.getElementById("pause").addEventListener("click", () => {
+        window.typemeter.toggleTracking();
+      });
+
+      document
+        .getElementById("open-dashboard")
+        .addEventListener("click", () => {
+          window.typemeter.openDashboard();
+          window.typemeter.closePopover();
+        });
+
+      // Close handlers
+      document.getElementById("close").addEventListener("click", () => {
+        console.log("close clicked");
+        window.typemeter.closePopover();
+      });
+
+      // Initial UI update
+      updatePauseUI();
+    </script>
+  </body>
+</html>
