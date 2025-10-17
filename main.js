@@ -126,8 +126,7 @@ async function createPopover() {
   popover = new BrowserWindow({
     width: 340,
     height: 420,
-    height: 800,
-    frame: true,
+    frame: false,
     resizable: false,
     movable: false,
     alwaysOnTop: true,
@@ -355,7 +354,6 @@ function startKeyboardTracking() {
       "ℹ️  Keys will only be tracked when TypeMeter windows are focused"
     );
     keyboardHookActive = true;
-    console.log(trackingPaused);
     // On Wayland, we'll use window-level tracking (set up in window creation)
     return;
   }
@@ -363,7 +361,6 @@ function startKeyboardTracking() {
   // X11/Windows: Use global hooks
   try {
     uIOhook.on("keydown", (e) => {
-      console.log({ e }, trackingPaused);
       if (trackingPaused) return;
 
       // Determine key type
@@ -400,12 +397,16 @@ function handleKeyPress(keyType) {
   const stats = dataStore.incrementKey(keyType);
   const kpm = dataStore.getKeysPerMinute();
   const todayStats = dataStore.getTodayStats();
+  const dailyStats = dataStore.getDailyStats();
+  const lastWeekStats = dataStore.getLastNDaysStats(7);
 
   // Broadcast to all windows
   const payload = {
     stats,
     kpm,
     todayStats,
+    dailyStats,
+    lastWeekStats,
     paused: trackingPaused,
   };
 
@@ -434,7 +435,6 @@ function stopKeyboardTracking() {
 // ========== IPC HANDLERS ==========
 
 ipcMain.on("key:pressed", (event, { keyType }) => {
-  console.log("IPC key pressed:", keyType);
   // Handle keyboard events from renderer (Wayland fallback)
   handleKeyPress(keyType);
 });
@@ -444,12 +444,14 @@ ipcMain.on("stats:get", (event) => {
   const kpm = dataStore.getKeysPerMinute();
   const todayStats = dataStore.getTodayStats();
   const dailyStats = dataStore.getDailyStats();
+  const lastWeekStats = dataStore.getLastNDaysStats(7);
 
   event.reply("stats:update", {
     stats,
     kpm,
     todayStats,
     dailyStats,
+    lastWeekStats,
     paused: trackingPaused,
     isWayland: isWaylandSession,
   });
@@ -463,6 +465,7 @@ ipcMain.on("stats:reset", () => {
     kpm: 0,
     todayStats: dataStore.getTodayStats(),
     dailyStats: {},
+    lastWeekStats: dataStore.getLastNDaysStats(7),
     paused: trackingPaused,
   };
 

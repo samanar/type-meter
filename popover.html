@@ -95,13 +95,11 @@
       }
     </style>
   </head>
-  <script>
-    console.log("popover html loaded");
-  </script>
+  <script></script>
   <body>
     <div class="panel">
       <header>
-        <div class="title">TypeMeter popover</div>
+        <div class="title">TypeMeter</div>
         <button id="close" class="btn" title="Close (Esc)">✕</button>
       </header>
 
@@ -135,7 +133,6 @@
     </div>
 
     <script>
-      console.log("popover script loaded");
       let paused = false;
       let isWayland = false;
 
@@ -230,7 +227,6 @@
 
       // Close handlers
       document.getElementById("close").addEventListener("click", () => {
-        console.log("close clicked");
         window.typemeter.closePopover();
       });
 

@@ -1,6 +1,8 @@
 // store.js - Data persistence for TypeMeter
 import Store from "electron-store";
 
+const MAX_STORED_DAYS = 90;
+
 const store = new Store({
   defaults: {
     stats: {
@@ -18,6 +20,38 @@ const store = new Store({
     },
   },
 });
+
+function createDailyEntry() {
+  return {
+    total: 0,
+    backspace: 0,
+    enter: 0,
+    delete: 0,
+    space: 0,
+    startTime: Date.now(),
+  };
+}
+
+function getDateKey(date = new Date()) {
+  const d = new Date(date);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
+    2,
+    "0"
+  )}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function trimOldDailyStats(stats, keepDays = MAX_STORED_DAYS) {
+  const cutoff = new Date();
+  cutoff.setHours(0, 0, 0, 0);
+  cutoff.setDate(cutoff.getDate() - (keepDays - 1));
+
+  Object.keys(stats.dailyStats || {}).forEach((key) => {
+    const entryDate = new Date(`${key}T00:00:00`);
+    if (Number.isNaN(entryDate.getTime()) || entryDate < cutoff) {
+      delete stats.dailyStats[key];
+    }
+  });
+}
 
 export function getStats() {
   return store.get("stats");
@@ -65,14 +99,7 @@ export function incrementKey(keyType = "total") {
 
   // Update daily stats
   if (!stats.dailyStats[today]) {
-    stats.dailyStats[today] = {
-      total: 0,
-      backspace: 0,
-      enter: 0,
-      delete: 0,
-      space: 0,
-      startTime: Date.now(),
-    };
+    stats.dailyStats[today] = createDailyEntry();
   }
 
   stats.dailyStats[today].total++;
@@ -81,6 +108,7 @@ export function incrementKey(keyType = "total") {
   if (keyType === "delete") stats.dailyStats[today].delete++;
   if (keyType === "space") stats.dailyStats[today].space++;
 
+  trimOldDailyStats(stats);
   store.set("stats", stats);
   return stats;
 }
@@ -123,12 +151,33 @@ export function getDailyStats() {
   return stats.dailyStats || {};
 }
 
+export function getLastNDaysStats(days = 7) {
+  const stats = getStats();
+  const safeDays = Math.max(1, Math.floor(days));
+  const today = new Date();
+  const results = [];
+
+  for (let i = safeDays - 1; i >= 0; i -= 1) {
+    const date = new Date(today);
+    date.setHours(0, 0, 0, 0);
+    date.setDate(today.getDate() - i);
+    const key = getDateKey(date);
+    const stored = stats.dailyStats?.[key];
+    results.push({
+      date: key,
+      total: stored?.total ?? 0,
+      backspace: stored?.backspace ?? 0,
+      enter: stored?.enter ?? 0,
+      delete: stored?.delete ?? 0,
+      space: stored?.space ?? 0,
+    });
+  }
+
+  return results;
+}
+
 function getTodayKey() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
-    2,
-    "0"
-  )}-${String(d.getDate()).padStart(2, "0")}`;
+  return getDateKey(new Date());
 }
 
 export function getPanelPosition() {
@@ -147,6 +196,7 @@ export default {
   getTodayStats,
   resetStats,
   getDailyStats,
+  getLastNDaysStats,
   getPanelPosition,
   setPanelPosition,
 };

@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'"
+      content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'"
     />
     <title>TypeMeter Dashboard</title>
     <style>
@@ -219,6 +219,47 @@
         overflow-y: auto;
       }
 
+      .chart-container {
+        position: relative;
+        width: 100%;
+        height: 280px;
+      }
+
+      .fun-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 16px;
+      }
+
+      .fun-card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .fun-title {
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: 0.4px;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+
+      .fun-value {
+        font-size: 32px;
+        font-weight: 800;
+        letter-spacing: -0.5px;
+      }
+
+      .fun-subtitle {
+        font-size: 13px;
+        color: var(--muted);
+      }
+
       .daily-item {
         display: flex;
         justify-content: space-between;
@@ -327,6 +368,40 @@
     </div>
 
     <div class="section">
+      <div class="section-title">Fun Insights</div>
+      <div class="fun-grid">
+        <div class="fun-card">
+          <div class="fun-title">Energy Burned</div>
+          <div class="fun-value" id="fun-energy">0 kcal</div>
+          <div class="fun-subtitle" id="fun-energy-sub">
+            Keep typing to power a gadget!
+          </div>
+        </div>
+        <div class="fun-card">
+          <div class="fun-title">Finger Workout</div>
+          <div class="fun-value" id="fun-workout">0 kg</div>
+          <div class="fun-subtitle" id="fun-workout-sub">
+            That's some serious key pressing.
+          </div>
+        </div>
+        <div class="fun-card">
+          <div class="fun-title">Travel Distance</div>
+          <div class="fun-value" id="fun-travel">0 m</div>
+          <div class="fun-subtitle" id="fun-travel-sub">
+            Fingers stayed local today.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Last 7 Days</div>
+      <div class="chart-container">
+        <canvas id="weekly-chart"></canvas>
+      </div>
+    </div>
+
+    <div class="section">
       <div class="section-title">Daily History</div>
       <div class="daily-history" id="daily-history">
         <div style="color: var(--muted); text-align: center; padding: 20px">
@@ -335,9 +410,25 @@
       </div>
     </div>
 
+    <script type="importmap">
+      {
+        "imports": {
+          "chart.js/auto": "./node_modules/chart.js/auto/auto.js",
+          "chart.js": "./node_modules/chart.js/dist/chart.esm.js",
+          "@kurkle/color": "./node_modules/@kurkle/color/dist/color.esm.js"
+        }
+      }
+    </script>
     <script type="module">
+      import Chart from "chart.js/auto";
+
       let paused = false;
       let isWayland = false;
+      let weeklyChart = null;
+      let latestWeeklyStats = [];
+      const weeklyChartCtx = document
+        .getElementById("weekly-chart")
+        ?.getContext("2d");
 
       // Request initial stats
       window.typemeter.getStats();
@@ -349,6 +440,7 @@
           todayStats,
           kpm,
           dailyStats,
+          lastWeekStats,
           paused: p,
           isWayland: wayland,
         } = data;
@@ -396,6 +488,12 @@
         if (dailyStats) {
           updateDailyHistory(dailyStats);
         }
+
+        if (Array.isArray(lastWeekStats)) {
+          updateWeeklyChart(lastWeekStats);
+        }
+
+        updateFunInsights(stats, todayStats);
 
         // Update pause state
         if (p !== undefined) {
@@ -469,6 +567,205 @@
           `
           )
           .join("");
+      }
+
+      function updateWeeklyChart(weeklyStats = []) {
+        if (!weeklyChartCtx) return;
+
+        latestWeeklyStats = Array.isArray(weeklyStats) ? [...weeklyStats] : [];
+
+        const accent = getCssVar("--accent") || "#38c8ff";
+        const muted = getCssVar("--muted") || "#8ea2c6";
+        const chartLabels = latestWeeklyStats.map((entry) =>
+          formatChartLabel(entry?.date)
+        );
+        const totals = latestWeeklyStats.map((entry) => entry?.total ?? 0);
+
+        if (!weeklyChart) {
+          weeklyChart = new Chart(weeklyChartCtx, {
+            type: "bar",
+            data: {
+              labels: chartLabels,
+              datasets: [
+                {
+                  label: "Total Keys",
+                  data: totals,
+                  backgroundColor: hexToRgba(accent, 0.35),
+                  hoverBackgroundColor: hexToRgba(accent, 0.55),
+                  borderColor: hexToRgba(accent, 0.85),
+                  borderWidth: 2,
+                  borderRadius: 8,
+                  maxBarThickness: 48,
+                },
+              ],
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              scales: {
+                x: {
+                  grid: { display: false },
+                  ticks: {
+                    color: muted,
+                    font: { size: 12 },
+                    maxRotation: 0,
+                    minRotation: 0,
+                  },
+                },
+                y: {
+                  beginAtZero: true,
+                  grid: {
+                    color: "rgba(255, 255, 255, 0.08)",
+                    drawBorder: false,
+                  },
+                  ticks: {
+                    color: muted,
+                    precision: 0,
+                    callback: (value) =>
+                      typeof value === "number" ? value.toString() : value,
+                  },
+                },
+              },
+              plugins: {
+                legend: { display: false },
+                tooltip: {
+                  backgroundColor: "rgba(17, 24, 39, 0.92)",
+                  borderColor: hexToRgba(accent, 0.6),
+                  borderWidth: 1,
+                  titleColor: getCssVar("--text") || "#e6eaf2",
+                  bodyColor: getCssVar("--text") || "#e6eaf2",
+                  callbacks: {
+                    title: (items) => {
+                      if (!items.length) return "";
+                      const idx = items[0].dataIndex;
+                      const entry = latestWeeklyStats[idx];
+                      return formatTooltipDate(entry?.date);
+                    },
+                    label: (item) => `${item.formattedValue} keys`,
+                  },
+                },
+              },
+            },
+          });
+        } else {
+          weeklyChart.data.labels = chartLabels;
+          weeklyChart.data.datasets[0].data = totals;
+          weeklyChart.update("none");
+        }
+      }
+
+      function updateFunInsights(stats = {}, todayStats = {}) {
+        const totalKeys = stats?.totalKeys ?? 0;
+        const todayTotal = todayStats?.total ?? 0;
+
+        const FUN_CONSTANTS = {
+          CALORIES_PER_KEY: 0.0008, // kcal per keystroke (playful estimate)
+          KCAL_TO_WH: 1.162,
+          PHONE_BATTERY_WH: 15,
+          FORCE_PER_KEY_KG: 0.06, // roughly 60 g of force per key
+          KEY_TRAVEL_CM: 1.2, // estimated finger travel per key
+          KEYBOARD_WIDTH_M: 0.28,
+          GRAND_PIANO_KG: 265,
+        };
+
+        const calories = totalKeys * FUN_CONSTANTS.CALORIES_PER_KEY;
+        const energyWh = calories * FUN_CONSTANTS.KCAL_TO_WH;
+        const phonePercent = Math.min(
+          (energyWh / FUN_CONSTANTS.PHONE_BATTERY_WH) * 100,
+          999
+        );
+
+        const todayForceKg = todayTotal * FUN_CONSTANTS.FORCE_PER_KEY_KG;
+        const equivalentPianos =
+          todayForceKg / FUN_CONSTANTS.GRAND_PIANO_KG;
+
+        const distanceMeters =
+          (todayTotal * FUN_CONSTANTS.KEY_TRAVEL_CM) / 100;
+        const keyboardLaps =
+          FUN_CONSTANTS.KEYBOARD_WIDTH_M > 0
+            ? distanceMeters / FUN_CONSTANTS.KEYBOARD_WIDTH_M
+            : 0;
+
+        setText("fun-energy", `${formatNumber(calories, 1)} kcal`);
+        setText(
+          "fun-energy-sub",
+          `≈ ${formatNumber(phonePercent, phonePercent < 10 ? 1 : 0)}% of a phone charge`
+        );
+
+        setText("fun-workout", `${formatNumber(todayForceKg, 1)} kg`);
+        setText(
+          "fun-workout-sub",
+          `That's like pressing ${formatNumber(
+            equivalentPianos,
+            equivalentPianos < 10 ? 2 : 1
+          )} grand pianos`
+        );
+
+        const travelValue =
+          distanceMeters >= 1000
+            ? `${formatNumber(distanceMeters / 1000, 2)} km`
+            : `${formatNumber(distanceMeters, 1)} m`;
+        setText("fun-travel", travelValue);
+        setText(
+          "fun-travel-sub",
+          `≈ ${formatNumber(keyboardLaps, keyboardLaps < 10 ? 1 : 0)} trips across your keyboard`
+        );
+      }
+
+      function formatChartLabel(dateStr) {
+        if (!dateStr) return "";
+        const date = new Date(`${dateStr}T00:00:00`);
+        if (Number.isNaN(date.getTime())) return dateStr;
+        return date.toLocaleDateString("en-US", {
+          weekday: "short",
+        });
+      }
+
+      function formatTooltipDate(dateStr) {
+        if (!dateStr) return "";
+        const date = new Date(`${dateStr}T00:00:00`);
+        if (Number.isNaN(date.getTime())) return dateStr;
+        return date.toLocaleDateString("en-US", {
+          weekday: "long",
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        });
+      }
+
+      function getCssVar(name) {
+        return getComputedStyle(document.documentElement)
+          .getPropertyValue(name)
+          .trim();
+      }
+
+      function hexToRgba(hex, alpha = 1) {
+        if (!hex) return `rgba(56, 200, 255, ${alpha})`;
+        const sanitized = hex.replace("#", "");
+        const expanded =
+          sanitized.length === 3
+            ? sanitized
+                .split("")
+                .map((char) => char + char)
+                .join("")
+            : sanitized;
+        if (expanded.length !== 6) return `rgba(56, 200, 255, ${alpha})`;
+        const r = parseInt(expanded.slice(0, 2), 16);
+        const g = parseInt(expanded.slice(2, 4), 16);
+        const b = parseInt(expanded.slice(4, 6), 16);
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+      }
+
+      function formatNumber(value, fractionDigits = 0) {
+        return Number(value || 0).toLocaleString(undefined, {
+          minimumFractionDigits: fractionDigits,
+          maximumFractionDigits: fractionDigits,
+        });
+      }
+
+      function setText(id, text) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = text;
       }
 
       function formatDate(dateStr) {
