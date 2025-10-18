@@ -16,50 +16,30 @@ A lightweight Electron-based keyboard tracker that monitors your typing activity
 
 🎨 **Modern UI** - Beautiful, dark-themed interface with smooth animations
 
-💾 **Persistent Storage** - All statistics are saved automatically
-
 ## Screenshots
 
 ### Tray Icon & Popover
+
 Click the tray icon to see a quick overview of your typing statistics.
 
 ### Dashboard
+
 Open the full dashboard for detailed analytics and daily history.
 
 ## Installation
 
 1. Clone this repository
 2. Install dependencies:
+
    ```bash
    npm install
    ```
 
 3. Start the app:
+
    ```bash
    npm start
    ```
-
-## Usage
-
-### Tray Menu
-- **Left Click** - Toggle the quick stats popover
-- **Right Click** - Open context menu with options:
-  - Pause/Resume Tracking
-  - Open Dashboard
-  - Quit
-
-### Popover Window
-- Shows today's total keystrokes
-- Displays keys per minute (last 60 seconds)
-- Quick access to pause/resume
-- Button to open full dashboard
-
-### Dashboard
-- Comprehensive statistics view
-- Today's breakdown by key type
-- All-time totals
-- Daily history
-- Reset statistics option
 
 ## Keyboard Shortcuts
 
@@ -82,13 +62,6 @@ Open the full dashboard for detailed analytics and daily history.
 - Tracking can be paused at any time
 - Statistics can be reset completely
 
-## Data Storage
-
-Statistics are stored in your system's app data directory:
-- **Linux**: `~/.config/type-meter/`
-- **Windows**: `%APPDATA%/type-meter/`
-- **macOS**: `~/Library/Application Support/type-meter/`
-
 ## Dependencies
 
 - **Electron** - Desktop app framework
@@ -103,14 +76,10 @@ Statistics are stored in your system's app data directory:
 ## Known Issues
 
 ### Linux
+
 - You may see a warning: `XkbGetKeyboard failed to locate a valid keyboard!`
   - This is a harmless warning and doesn't affect functionality
   - The app will still track keyboard events correctly
-
-### Permissions
-- On some systems, you may need to grant accessibility permissions for global keyboard monitoring
-- **macOS**: System Preferences → Security & Privacy → Accessibility
-- **Linux**: May require running with appropriate permissions
 
 ## Development
 
@@ -136,10 +105,6 @@ npm install --save-dev @electron/forge
 npx electron-forge import
 npm run make
 ```
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit issues or pull requests.
 
 ## License
 
