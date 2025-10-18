@@ -22,9 +22,13 @@ A lightweight Electron-based keyboard tracker that monitors your typing activity
 
 Click the tray icon to see a quick overview of your typing statistics.
 
+![Tray Icon & Popover](screenshots/screenshot-1.jpg)
+
 ### Dashboard
 
 Open the full dashboard for detailed analytics and daily history.
+
+![Dashboard](screenshots/screenshot-2.jpg)
 
 ## Installation
 
@@ -57,10 +61,13 @@ Open the full dashboard for detailed analytics and daily history.
 
 ## Privacy
 
-- All data is stored locally on your computer
-- No data is sent to any server
-- Tracking can be paused at any time
-- Statistics can be reset completely
+TypeMeter takes your privacy seriously. Here's what you need to know:
+
+- **Local Storage Only**: All data is stored locally on your computer using Electron's secure storage. No data is ever sent to external servers.
+- **What We Track**: Only keystroke counts and timing data are recorded. We do not log what you type or capture any personal information.
+- **No Internet Required**: The app works entirely offline and doesn't require an internet connection.
+- **Control Your Data**: You can pause tracking at any time, reset all statistics, or quit the app completely.
+- **Data Retention**: Statistics are kept until you manually reset them or uninstall the app.
 
 ## Dependencies
 
@@ -173,7 +180,6 @@ MIT License - feel free to use this project for personal or commercial purposes.
 ---
 
 **Note**: This app runs in the system tray and continues running even when all windows are closed. Use the tray menu to quit the application.
-
 
 ## In memory of @sajadadineh
 
