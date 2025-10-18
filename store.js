@@ -2,6 +2,7 @@
 import Store from "electron-store";
 
 const MAX_STORED_DAYS = 90;
+const KEY_HISTORY_MINUTES = 60;
 
 const store = new Store({
   defaults: {
@@ -93,9 +94,9 @@ export function incrementKey(keyType = "total") {
   // Add timestamp for rate calculation
   stats.timestamps.push(Date.now());
 
-  // Keep only last 5 minutes of timestamps for performance
-  const fiveMinAgo = Date.now() - 5 * 60 * 1000;
-  stats.timestamps = stats.timestamps.filter((t) => t > fiveMinAgo);
+  // Keep only last KEY_HISTORY_MINUTES of timestamps for performance
+  const historyCutoff = Date.now() - KEY_HISTORY_MINUTES * 60 * 1000;
+  stats.timestamps = stats.timestamps.filter((t) => t >= historyCutoff);
 
   // Update daily stats
   if (!stats.dailyStats[today]) {
@@ -117,6 +118,36 @@ export function getKeysPerMinute() {
   const stats = getStats();
   const oneMinAgo = Date.now() - 60 * 1000;
   return stats.timestamps.filter((t) => t > oneMinAgo).length;
+}
+
+export function getKeysPerMinuteSeries(minutes = 30) {
+  const stats = getStats();
+  const now = Date.now();
+  const safeMinutes = Math.max(1, Math.min(120, Math.floor(minutes)));
+  const windowStart = now - safeMinutes * 60 * 1000;
+  const timestamps = (stats.timestamps || []).filter((t) => t >= windowStart);
+  const interval = 60 * 1000;
+
+  const buckets = Array.from({ length: safeMinutes }, (_, idx) => {
+    const start = windowStart + idx * interval;
+    return {
+      start,
+      end: start + interval,
+      value: 0,
+    };
+  });
+
+  timestamps.forEach((t) => {
+    const idx = Math.floor((t - windowStart) / interval);
+    if (idx >= 0 && idx < buckets.length) {
+      buckets[idx].value += 1;
+    }
+  });
+
+  return buckets.map((bucket) => ({
+    timestamp: new Date(bucket.end).toISOString(),
+    value: bucket.value,
+  }));
 }
 
 export function getTodayStats() {
@@ -193,6 +224,7 @@ export default {
   updateStats,
   incrementKey,
   getKeysPerMinute,
+  getKeysPerMinuteSeries,
   getTodayStats,
   resetStats,
   getDailyStats,

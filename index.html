@@ -16,6 +16,7 @@
         --muted: #8ea2c6;
         --accent: #38c8ff;
         --accent-dim: #2a9fc7;
+        --accent-negative: #f87171;
         --border: rgba(255, 255, 255, 0.08);
         --success: #4ade80;
         --warning: #fbbf24;
@@ -172,6 +173,18 @@
         margin-top: 8px;
       }
 
+      .sparkline {
+        position: relative;
+        width: 100%;
+        height: 72px;
+        margin-bottom: 8px;
+      }
+
+      .sparkline canvas {
+        width: 100% !important;
+        height: 100% !important;
+      }
+
       .section {
         background: var(--surface);
         border: 1px solid var(--border);
@@ -188,28 +201,39 @@
 
       .stats-list {
         display: grid;
-        gap: 12px;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 8px;
       }
 
       .stat-row {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 12px;
+        padding: 10px 12px;
         background: var(--card);
-        border-radius: 8px;
+        border-radius: 10px;
         border: 1px solid var(--border);
+        backdrop-filter: blur(6px);
       }
 
       .stat-label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
         font-weight: 500;
         color: var(--muted);
+        font-size: 12px;
       }
 
       .stat-value {
         font-weight: 700;
-        font-size: 18px;
+        font-size: 20px;
         color: var(--text);
+      }
+
+      .stat-icon {
+        font-size: 16px;
+        line-height: 1;
       }
 
       .daily-history {
@@ -242,6 +266,9 @@
       }
 
       .fun-title {
+        display: flex;
+        align-items: center;
+        gap: 10px;
         font-size: 13px;
         font-weight: 600;
         letter-spacing: 0.4px;
@@ -258,6 +285,11 @@
       .fun-subtitle {
         font-size: 13px;
         color: var(--muted);
+      }
+
+      .fun-icon {
+        font-size: 18px;
+        line-height: 1;
       }
 
       .daily-item {
@@ -303,7 +335,6 @@
       <div>
         <h1>TypeMeter Dashboard</h1>
         <div class="status">
-          inside index
           <div class="status-indicator" id="status-indicator"></div>
           <span id="status-text">Tracking Active</span>
         </div>
@@ -324,8 +355,15 @@
 
       <div class="card">
         <div class="card-title">Keys Per Minute</div>
-        <div class="card-value" id="kpm">0</div>
-        <div class="card-subtitle">Last 60 seconds</div>
+        <div style="display: flex">
+          <div>
+            <div class="card-value" id="kpm">0</div>
+            <div class="card-subtitle">Last 60 seconds</div>
+          </div>
+          <div class="sparkline">
+            <canvas id="kpm-chart" aria-label="Keys per minute trend"></canvas>
+          </div>
+        </div>
       </div>
 
       <div class="card">
@@ -345,23 +383,38 @@
       <div class="section-title">Today's Breakdown</div>
       <div class="stats-list">
         <div class="stat-row">
-          <span class="stat-label">Total Keys</span>
+          <span class="stat-label">
+            <span class="stat-icon" aria-hidden="true">⌨️</span>
+            <span>Total Keys</span>
+          </span>
           <span class="stat-value" id="stat-total">0</span>
         </div>
         <div class="stat-row">
-          <span class="stat-label">Backspace</span>
+          <span class="stat-label">
+            <span class="stat-icon" aria-hidden="true">⌫</span>
+            <span>Backspace</span>
+          </span>
           <span class="stat-value" id="stat-backspace">0</span>
         </div>
         <div class="stat-row">
-          <span class="stat-label">Enter</span>
+          <span class="stat-label">
+            <span class="stat-icon" aria-hidden="true">↩️</span>
+            <span>Enter</span>
+          </span>
           <span class="stat-value" id="stat-enter">0</span>
         </div>
         <div class="stat-row">
-          <span class="stat-label">Delete</span>
+          <span class="stat-label">
+            <span class="stat-icon" aria-hidden="true">🗑️</span>
+            <span>Delete</span>
+          </span>
           <span class="stat-value" id="stat-delete">0</span>
         </div>
         <div class="stat-row">
-          <span class="stat-label">Space</span>
+          <span class="stat-label">
+            <span class="stat-icon" aria-hidden="true">␠</span>
+            <span>Space</span>
+          </span>
           <span class="stat-value" id="stat-space">0</span>
         </div>
       </div>
@@ -371,24 +424,43 @@
       <div class="section-title">Fun Insights</div>
       <div class="fun-grid">
         <div class="fun-card">
-          <div class="fun-title">Energy Burned</div>
+          <div class="fun-title">
+            <span class="fun-icon" aria-hidden="true">⚡</span>
+            <span>Energy Burned</span>
+          </div>
           <div class="fun-value" id="fun-energy">0 kcal</div>
           <div class="fun-subtitle" id="fun-energy-sub">
             Keep typing to power a gadget!
           </div>
         </div>
         <div class="fun-card">
-          <div class="fun-title">Finger Workout</div>
+          <div class="fun-title">
+            <span class="fun-icon" aria-hidden="true">💪</span>
+            <span>Finger Workout</span>
+          </div>
           <div class="fun-value" id="fun-workout">0 kg</div>
           <div class="fun-subtitle" id="fun-workout-sub">
             That's some serious key pressing.
           </div>
         </div>
         <div class="fun-card">
-          <div class="fun-title">Travel Distance</div>
+          <div class="fun-title">
+            <span class="fun-icon" aria-hidden="true">🧭</span>
+            <span>Travel Distance</span>
+          </div>
           <div class="fun-value" id="fun-travel">0 m</div>
           <div class="fun-subtitle" id="fun-travel-sub">
             Fingers stayed local today.
+          </div>
+        </div>
+        <div class="fun-card">
+          <div class="fun-title">
+            <span class="fun-icon" aria-hidden="true">📝</span>
+            <span>Writing Progress</span>
+          </div>
+          <div class="fun-value" id="fun-writing">0 pages</div>
+          <div class="fun-subtitle" id="fun-writing-sub">
+            Novel progress: 0%
           </div>
         </div>
       </div>
@@ -421,6 +493,11 @@
     </script>
     <script type="module">
       import Chart from "chart.js/auto";
+      import {
+        calculateFunInsights,
+        formatNumber,
+      } from "./scripts/calculations.js";
+      import { SparklineChart } from "./scripts/sparkline.js";
 
       let paused = false;
       let isWayland = false;
@@ -429,6 +506,8 @@
       const weeklyChartCtx = document
         .getElementById("weekly-chart")
         ?.getContext("2d");
+      let kpmSparkline = null;
+      const kpmChartCanvas = document.getElementById("kpm-chart");
 
       // Request initial stats
       window.typemeter.getStats();
@@ -441,6 +520,7 @@
           kpm,
           dailyStats,
           lastWeekStats,
+          kpmSeries,
           paused: p,
           isWayland: wayland,
         } = data;
@@ -491,6 +571,11 @@
 
         if (Array.isArray(lastWeekStats)) {
           updateWeeklyChart(lastWeekStats);
+        }
+
+        if (Array.isArray(kpmSeries)) {
+          ensureKpmSparkline();
+          kpmSparkline?.update(kpmSeries);
         }
 
         updateFunInsights(stats, todayStats);
@@ -655,60 +740,62 @@
       }
 
       function updateFunInsights(stats = {}, todayStats = {}) {
-        const totalKeys = stats?.totalKeys ?? 0;
-        const todayTotal = todayStats?.total ?? 0;
+        const insights = calculateFunInsights(stats, todayStats);
 
-        const FUN_CONSTANTS = {
-          CALORIES_PER_KEY: 0.0008, // kcal per keystroke (playful estimate)
-          KCAL_TO_WH: 1.162,
-          PHONE_BATTERY_WH: 15,
-          FORCE_PER_KEY_KG: 0.06, // roughly 60 g of force per key
-          KEY_TRAVEL_CM: 1.2, // estimated finger travel per key
-          KEYBOARD_WIDTH_M: 0.28,
-          GRAND_PIANO_KG: 265,
-        };
-
-        const calories = totalKeys * FUN_CONSTANTS.CALORIES_PER_KEY;
-        const energyWh = calories * FUN_CONSTANTS.KCAL_TO_WH;
-        const phonePercent = Math.min(
-          (energyWh / FUN_CONSTANTS.PHONE_BATTERY_WH) * 100,
-          999
+        // Update energy display
+        setText(
+          "fun-energy",
+          `${formatNumber(insights.energy.calories, 1)} kcal`
         );
-
-        const todayForceKg = todayTotal * FUN_CONSTANTS.FORCE_PER_KEY_KG;
-        const equivalentPianos =
-          todayForceKg / FUN_CONSTANTS.GRAND_PIANO_KG;
-
-        const distanceMeters =
-          (todayTotal * FUN_CONSTANTS.KEY_TRAVEL_CM) / 100;
-        const keyboardLaps =
-          FUN_CONSTANTS.KEYBOARD_WIDTH_M > 0
-            ? distanceMeters / FUN_CONSTANTS.KEYBOARD_WIDTH_M
-            : 0;
-
-        setText("fun-energy", `${formatNumber(calories, 1)} kcal`);
         setText(
           "fun-energy-sub",
-          `≈ ${formatNumber(phonePercent, phonePercent < 10 ? 1 : 0)}% of a phone charge`
+          `≈ ${formatNumber(
+            insights.energy.phonePercent,
+            insights.energy.phonePercent < 10 ? 1 : 0
+          )}% of a phone charge`
         );
 
-        setText("fun-workout", `${formatNumber(todayForceKg, 1)} kg`);
+        // Update workout display
+        setText(
+          "fun-workout",
+          `${formatNumber(insights.workout.forceKg, 1)} kg`
+        );
         setText(
           "fun-workout-sub",
           `That's like pressing ${formatNumber(
-            equivalentPianos,
-            equivalentPianos < 10 ? 2 : 1
+            insights.workout.equivalentPianos,
+            insights.workout.equivalentPianos < 10 ? 2 : 1
           )} grand pianos`
         );
 
-        const travelValue =
-          distanceMeters >= 1000
-            ? `${formatNumber(distanceMeters / 1000, 2)} km`
-            : `${formatNumber(distanceMeters, 1)} m`;
-        setText("fun-travel", travelValue);
+        // Update travel display
+        setText("fun-travel", insights.travel.travelValue);
         setText(
           "fun-travel-sub",
-          `≈ ${formatNumber(keyboardLaps, keyboardLaps < 10 ? 1 : 0)} trips across your keyboard`
+          `≈ ${formatNumber(
+            insights.travel.keyboardLaps,
+            insights.travel.keyboardLaps < 10 ? 1 : 0
+          )} trips across your keyboard`
+        );
+
+        // Update writing progress display
+        const pagesPrecision = insights.writing.pages < 10 ? 1 : 0;
+        const todayPagesPrecision = insights.writing.todayPages < 10 ? 1 : 0;
+        const novelPrecision = insights.writing.novelPercent < 10 ? 1 : 0;
+
+        setText(
+          "fun-writing",
+          `${formatNumber(insights.writing.pages, pagesPrecision)} pages`
+        );
+        setText(
+          "fun-writing-sub",
+          `Today: ${formatNumber(
+            insights.writing.todayPages,
+            todayPagesPrecision
+          )} pages • Novel: ${formatNumber(
+            insights.writing.novelPercent,
+            novelPrecision
+          )}%`
         );
       }
 
@@ -739,6 +826,17 @@
           .trim();
       }
 
+      function ensureKpmSparkline() {
+        if (kpmSparkline || !kpmChartCanvas) return;
+        const colorUp = getCssVar("--accent") || "#38c8ff";
+        const colorDown = getCssVar("--accent-negative") || "#f87171";
+        kpmSparkline = new SparklineChart(kpmChartCanvas, {
+          colorUp,
+          colorDown,
+          tooltipLabel: "Keys / min",
+        });
+      }
+
       function hexToRgba(hex, alpha = 1) {
         if (!hex) return `rgba(56, 200, 255, ${alpha})`;
         const sanitized = hex.replace("#", "");
@@ -754,13 +852,6 @@
         const g = parseInt(expanded.slice(2, 4), 16);
         const b = parseInt(expanded.slice(4, 6), 16);
         return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-      }
-
-      function formatNumber(value, fractionDigits = 0) {
-        return Number(value || 0).toLocaleString(undefined, {
-          minimumFractionDigits: fractionDigits,
-          maximumFractionDigits: fractionDigits,
-        });
       }
 
       function setText(id, text) {

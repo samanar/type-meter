@@ -125,7 +125,7 @@ async function createPopover() {
 
   popover = new BrowserWindow({
     width: 340,
-    height: 420,
+    height: 580,
     frame: false,
     resizable: false,
     movable: false,
@@ -399,6 +399,7 @@ function handleKeyPress(keyType) {
   const todayStats = dataStore.getTodayStats();
   const dailyStats = dataStore.getDailyStats();
   const lastWeekStats = dataStore.getLastNDaysStats(7);
+  const kpmSeries = dataStore.getKeysPerMinuteSeries();
 
   // Broadcast to all windows
   const payload = {
@@ -407,6 +408,7 @@ function handleKeyPress(keyType) {
     todayStats,
     dailyStats,
     lastWeekStats,
+    kpmSeries,
     paused: trackingPaused,
   };
 
@@ -445,6 +447,7 @@ ipcMain.on("stats:get", (event) => {
   const todayStats = dataStore.getTodayStats();
   const dailyStats = dataStore.getDailyStats();
   const lastWeekStats = dataStore.getLastNDaysStats(7);
+  const kpmSeries = dataStore.getKeysPerMinuteSeries();
 
   event.reply("stats:update", {
     stats,
@@ -452,6 +455,7 @@ ipcMain.on("stats:get", (event) => {
     todayStats,
     dailyStats,
     lastWeekStats,
+    kpmSeries,
     paused: trackingPaused,
     isWayland: isWaylandSession,
   });
@@ -466,6 +470,7 @@ ipcMain.on("stats:reset", () => {
     todayStats: dataStore.getTodayStats(),
     dailyStats: {},
     lastWeekStats: dataStore.getLastNDaysStats(7),
+    kpmSeries: dataStore.getKeysPerMinuteSeries(),
     paused: trackingPaused,
   };
 

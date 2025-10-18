@@ -5,7 +5,7 @@
     <title>TypeMeter Popover</title>
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'unsafe-inline'"
+      content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'"
     />
     <style>
       :root {
@@ -14,6 +14,7 @@
         --text: #e6eaf2;
         --muted: #8ea2c6;
         --accent: #38c8ff;
+        --accent-negative: #f87171;
       }
       html,
       body {
@@ -69,6 +70,9 @@
         background: var(--card);
         padding: 10px;
         border-radius: 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
       }
       .big {
         font-size: 28px;
@@ -79,6 +83,19 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
+        color: var(--muted);
+      }
+      .row.double {
+        gap: 12px;
+      }
+      .row.double .metric {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        flex: 1 1 0;
+        color: var(--text);
+      }
+      .row.double .metric span {
         color: var(--muted);
       }
       footer {
@@ -93,9 +110,43 @@
         background: rgba(255, 255, 255, 0.06);
         color: var(--muted);
       }
+      .sparkline {
+        position: relative;
+        width: 240px;
+        height: 60px;
+      }
+      .sparkline canvas {
+        width: 100% !important;
+        height: 100% !important;
+      }
+      .insights-title {
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.3px;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      .insights-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 6px;
+      }
+      .insight {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        color: var(--text);
+      }
+      .insight-icon {
+        font-size: 14px;
+        line-height: 1;
+      }
+      .insight-text {
+        color: var(--muted);
+      }
     </style>
   </head>
-  <script></script>
   <body>
     <div class="panel">
       <header>
@@ -105,16 +156,19 @@
 
       <main>
         <div class="card">
-          inside popover
           <div class="row">
             <div>Total Keystrokes (today)</div>
             <div class="pill" id="state">Tracking</div>
           </div>
           <div class="big" id="total">0</div>
-          <div class="row">
-            <span>Backspace</span><strong id="backs">0</strong>
+          <div class="row double">
+            <div class="metric">
+              <span>Backspace</span><strong id="backs">0</strong>
+            </div>
+            <div class="metric">
+              <span>Enter</span><strong id="ent">0</strong>
+            </div>
           </div>
-          <div class="row"><span>Enter</span><strong id="ent">0</strong></div>
         </div>
 
         <div class="card">
@@ -122,7 +176,51 @@
             <div>Keys / minute</div>
             <div>last 60s</div>
           </div>
-          <div class="big" id="kpm">0</div>
+          <div
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+            "
+          >
+            <div class="big" id="kpm">0</div>
+            <div class="sparkline">
+              <canvas
+                id="popover-kpm-chart"
+                aria-label="Keys per minute trend"
+              ></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="insights-title">Quick insights</div>
+          <div class="insights-grid">
+            <div class="insight">
+              <span class="insight-icon" aria-hidden="true">⚡</span>
+              <span class="insight-text" id="insight-energy"
+                >0 kcal burned</span
+              >
+            </div>
+            <div class="insight">
+              <span class="insight-icon" aria-hidden="true">💪</span>
+              <span class="insight-text" id="insight-workout"
+                >0 kg pressed</span
+              >
+            </div>
+            <div class="insight">
+              <span class="insight-icon" aria-hidden="true">🧭</span>
+              <span class="insight-text" id="insight-travel"
+                >0 m travelled</span
+              >
+            </div>
+            <div class="insight">
+              <span class="insight-icon" aria-hidden="true">📝</span>
+              <span class="insight-text" id="insight-writing">
+                0 pages today
+              </span>
+            </div>
+          </div>
         </div>
       </main>
 
@@ -132,55 +230,77 @@
       </footer>
     </div>
 
-    <script>
+    <script type="importmap">
+      {
+        "imports": {
+          "chart.js/auto": "./node_modules/chart.js/auto/auto.js",
+          "chart.js": "./node_modules/chart.js/dist/chart.esm.js",
+          "@kurkle/color": "./node_modules/@kurkle/color/dist/color.esm.js"
+        }
+      }
+    </script>
+    <script type="module">
+      import { SparklineChart } from "./scripts/sparkline.js";
+      import {
+        calculateFunInsights,
+        formatNumber,
+      } from "./scripts/calculations.js";
+
       let paused = false;
       let isWayland = false;
+      let kpmSparkline = null;
+      const kpmChartCanvas = document.getElementById("popover-kpm-chart");
 
-      // Request initial stats when popover opens
       window.typemeter.getStats();
 
-      // Listen for stats updates from main process
       window.typemeter.onStatsUpdate((data) => {
-        const { todayStats, kpm, paused: p, isWayland: wayland } = data;
+        const {
+          stats,
+          todayStats,
+          kpm,
+          kpmSeries,
+          paused: p,
+          isWayland: wayland,
+        } = data;
 
-        // Check if running on Wayland
         if (wayland !== undefined) {
           isWayland = wayland;
           if (isWayland) {
-            // Show Wayland notice
             document.getElementById("state").title =
               "Wayland: Only tracks keys when this window is focused";
           }
         }
 
-        // Update display
-        document.getElementById("total").textContent = String(
+        document.getElementById("total").textContent = formatNumber(
           todayStats.total || 0
         );
-        document.getElementById("backs").textContent = String(
+        document.getElementById("backs").textContent = formatNumber(
           todayStats.backspace || 0
         );
-        document.getElementById("ent").textContent = String(
+        document.getElementById("ent").textContent = formatNumber(
           todayStats.enter || 0
         );
-        document.getElementById("kpm").textContent = String(kpm || 0);
+        document.getElementById("kpm").textContent = formatNumber(kpm || 0);
 
-        // Update pause state if provided
+        if (Array.isArray(kpmSeries)) {
+          ensureSparkline();
+          kpmSparkline?.update(kpmSeries);
+        }
+
+        updateInsights(stats, todayStats);
+
         if (p !== undefined) {
           paused = p;
           updatePauseUI();
         }
       });
 
-      // Wayland fallback: Track keys when window is focused
       window.addEventListener("keydown", (e) => {
-        // Always handle Escape for closing
         if (e.key === "Escape") {
           window.typemeter.closePopover();
           return;
         }
 
-        // Track keys if on Wayland and not paused
         if (isWayland && !paused) {
           let keyType = "normal";
           if (e.key === "Backspace") keyType = "backspace";
@@ -192,11 +312,27 @@
         }
       });
 
-      // Pause/resume reflected from tray menu
       window.typemeter.onTracking(({ paused: p }) => {
         paused = p;
         updatePauseUI();
       });
+
+      document.getElementById("pause").addEventListener("click", () => {
+        window.typemeter.toggleTracking();
+      });
+
+      document
+        .getElementById("open-dashboard")
+        .addEventListener("click", () => {
+          window.typemeter.openDashboard();
+          window.typemeter.closePopover();
+        });
+
+      document.getElementById("close").addEventListener("click", () => {
+        window.typemeter.closePopover();
+      });
+
+      updatePauseUI();
 
       function updatePauseUI() {
         const stateEl = document.getElementById("state");
@@ -213,25 +349,49 @@
         }
       }
 
-      // Buttons
-      document.getElementById("pause").addEventListener("click", () => {
-        window.typemeter.toggleTracking();
-      });
+      function getCssVar(name) {
+        return getComputedStyle(document.documentElement)
+          .getPropertyValue(name)
+          .trim();
+      }
 
-      document
-        .getElementById("open-dashboard")
-        .addEventListener("click", () => {
-          window.typemeter.openDashboard();
-          window.typemeter.closePopover();
+      function ensureSparkline() {
+        if (kpmSparkline || !kpmChartCanvas) return;
+        const colorUp = getCssVar("--accent") || "#38c8ff";
+        const colorDown = getCssVar("--accent-negative") || "#f87171";
+        kpmSparkline = new SparklineChart(kpmChartCanvas, {
+          colorUp,
+          colorDown,
+          tooltipLabel: "Keys / min",
         });
+      }
 
-      // Close handlers
-      document.getElementById("close").addEventListener("click", () => {
-        window.typemeter.closePopover();
-      });
+      function updateInsights(stats = {}, todayStats = {}) {
+        if (!stats || !todayStats) return;
+        const insights = calculateFunInsights(stats, todayStats);
 
-      // Initial UI update
-      updatePauseUI();
+        setText(
+          "insight-energy",
+          `${formatNumber(insights.energy.calories, 1)} kcal burned`
+        );
+        setText(
+          "insight-workout",
+          `${formatNumber(insights.workout.forceKg, 1)} kg pressed today`
+        );
+        setText(
+          "insight-travel",
+          `${insights.travel.travelValue} travelled today`
+        );
+        setText(
+          "insight-writing",
+          `${formatNumber(insights.writing.todayPages, 1)} pages today`
+        );
+      }
+
+      function setText(id, text) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = text;
+      }
     </script>
   </body>
 </html>

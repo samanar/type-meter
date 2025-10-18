@@ -119,3 +119,8 @@ MIT License - feel free to use this project for personal or commercial purposes.
 ---
 
 **Note**: This app runs in the system tray and continues running even when all windows are closed. Use the tray menu to quit the application.
+
+
+## In memory (cached, not deleted) of @sajadadineh.
+
+Though you’ve gone offline for now, your spirit still runs in the background processes of this project.
