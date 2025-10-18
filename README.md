@@ -75,6 +75,15 @@ Open the full dashboard for detailed analytics and daily history.
 
 ## Known Issues
 
+### macOS
+
+- **First Launch**: You'll be prompted to grant accessibility permissions
+  - Go to: System Preferences → Security & Privacy → Privacy → Accessibility
+  - Add and enable your Terminal app or TypeMeter
+  - Restart the app after granting permissions
+- **Tray Icon**: If the icon doesn't appear, check Console.app for errors
+- **Template Icon**: For best results, create a proper monochrome template icon (see `assets/README.md`)
+
 ### Linux
 
 - You may see a warning: `XkbGetKeyboard failed to locate a valid keyboard!`
@@ -98,13 +107,58 @@ type-meter/
 
 ### Building for Production
 
-To package the app for distribution:
+The app uses [Electron Forge](https://electronforge.io/) for packaging and distribution.
+
+#### Quick Build (Current Platform)
 
 ```bash
-npm install --save-dev @electron/forge
-npx electron-forge import
 npm run make
 ```
+
+#### Platform-Specific Builds
+
+```bash
+# Windows
+npm run make:win
+npm run package:win
+
+# macOS
+npm run make:mac
+npm run package:mac
+
+# Linux
+npm run make:linux
+npm run package:linux
+
+# All platforms
+npm run build:all
+```
+
+#### Output
+
+Built applications will be placed in the `out/` directory:
+
+- **Windows**: `.exe` installer (Squirrel)
+- **macOS**: `.dmg` disk image and `.zip` archive
+- **Linux**: `.deb` (Debian/Ubuntu) and `.rpm` (Red Hat/Fedora) packages
+
+### Releasing
+
+1. Update version in `package.json`
+2. Commit changes
+3. Create and push a git tag:
+
+   ```bash
+   git tag v1.0.1
+   git push origin v1.0.1
+   ```
+
+4. GitHub Actions will automatically:
+   - Build the app for all platforms
+   - Create a GitHub release
+   - Upload the installers as release assets
+
+The release workflow is defined in `.github/workflows/release.yml`.
 
 ## License
 

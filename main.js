@@ -26,15 +26,38 @@ function asset(p) {
 }
 
 function createTray() {
-  //   const iconPath = isMac ? asset("trayTemplate.png") : asset("tray.png");
-  const iconPath = asset("tray.png");
-  const icon = nativeImage.createFromPath(iconPath);
-  tray = new Tray(icon);
-  tray.setToolTip("TypeMeter");
+  console.log("Creating tray icon...");
+  try {
+    // On macOS, use Template icon for proper menu bar appearance
+    const iconPath = isMac ? asset("trayTemplate.png") : asset("tray.png");
+    console.log("Icon path:", iconPath);
 
-  tray.on("click", togglePopover); // left click → toggle popover
-  tray.on("right-click", showContextMenu); // right click → menu
-  updateTrayMenu(); // sets context menu for macOS too
+    const icon = nativeImage.createFromPath(iconPath);
+
+    // If template icon doesn't exist on Mac, fall back to regular icon
+    if (isMac && icon.isEmpty()) {
+      console.log("Template icon not found, using regular icon");
+      const fallbackIcon = nativeImage.createFromPath(asset("tray.png"));
+      if (!fallbackIcon.isEmpty()) {
+        // Resize for macOS menu bar (typically 22x22 or 16x16)
+        tray = new Tray(fallbackIcon.resize({ width: 22, height: 22 }));
+      } else {
+        console.error("No tray icon found!");
+        return;
+      }
+    } else {
+      tray = new Tray(icon);
+    }
+
+    tray.setToolTip("TypeMeter");
+    console.log("Tray icon created successfully");
+
+    tray.on("click", togglePopover); // left click → toggle popover
+    tray.on("right-click", showContextMenu); // right click → menu
+    updateTrayMenu(); // sets context menu for macOS too
+  } catch (err) {
+    console.error("Failed to create tray:", err);
+  }
 }
 
 function showContextMenu() {
@@ -358,7 +381,8 @@ function startKeyboardTracking() {
     return;
   }
 
-  // X11/Windows: Use global hooks
+  // X11/Windows/macOS: Use global hooks
+  console.log("Starting global keyboard tracking...");
   try {
     uIOhook.on("keydown", (e) => {
       if (trackingPaused) return;
@@ -383,9 +407,26 @@ function startKeyboardTracking() {
 
     uIOhook.start();
     keyboardHookActive = true;
-    console.log("✓ Global keyboard tracking started (X11/Windows)");
+    console.log("✓ Global keyboard tracking started");
+
+    if (isMac) {
+      console.log("ℹ️  macOS: Make sure to grant accessibility permissions");
+      console.log("   System Preferences → Security & Privacy → Accessibility");
+    }
   } catch (err) {
     console.error("Failed to start keyboard tracking:", err);
+    console.error(
+      "The app will continue to run, but keyboard tracking is disabled"
+    );
+
+    if (isMac) {
+      console.error(
+        "macOS users: Check accessibility permissions in System Preferences"
+      );
+    }
+
+    // Don't crash the app - continue with tray functionality
+    keyboardHookActive = false;
   }
 }
 
@@ -498,10 +539,26 @@ ipcMain.on("dashboard:close", () => {
 // ========== APP LIFECYCLE ==========
 
 app.whenReady().then(async () => {
-  if (!singleInstanceGuard()) return;
-  if (isMac) app.dock.hide();
+  console.log("App is ready, platform:", process.platform);
+
+  if (!singleInstanceGuard()) {
+    console.log("Another instance is already running");
+    return;
+  }
+
+  if (isMac) {
+    console.log("macOS detected, hiding dock icon");
+    app.dock.hide();
+  }
+
+  // Create tray first - this should always work
   createTray();
+
+  // Then start keyboard tracking - this might fail on macOS without permissions
+  // but the app should continue to work
   startKeyboardTracking();
+
+  console.log("TypeMeter is running in the system tray");
 });
 
 app.on("window-all-closed", () => {
