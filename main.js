@@ -148,7 +148,7 @@ async function createPopover() {
 
   popover = new BrowserWindow({
     width: 340,
-    height: 580,
+    height: 490,
     frame: false,
     resizable: false,
     movable: false,
@@ -431,7 +431,6 @@ function startKeyboardTracking() {
 }
 
 function handleKeyPress(keyType) {
-  console.log(`Key pressed: ${(keyType, trackingPaused)}`);
   if (trackingPaused) return;
 
   // Update stats
